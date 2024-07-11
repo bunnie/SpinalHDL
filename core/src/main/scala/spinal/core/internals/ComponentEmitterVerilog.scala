@@ -1162,7 +1162,7 @@ class ComponentEmitterVerilog(
               builder ++=  s"${filledValue.substring(symbolWidth * (symbolCount - i - 1), symbolWidth * (symbolCount - i))}\n"
             } else {
               builder ++= s"$filledValue\n"
-              v_builder ++= s"            'd$index: data <= 32'b$filledValue;\n"
+              v_builder ++= s"            'd$index: data <= $symbolWidth'b$filledValue;\n"
             }
           }
 
@@ -1191,8 +1191,8 @@ class ComponentEmitterVerilog(
               |`default_nettype none
               |
               |module {prefix}_Rom_1rs #(
-              |    parameter wordCount = 512,
-              |    parameter wordWidth = 32,
+              |    parameter wordCount = {wordCount},
+              |    parameter wordWidth = {wordWidth},
               |    parameter technology = "auto", // not used
               |    parameter addrWidth = $clog2(wordCount)
               |)
@@ -1211,7 +1211,7 @@ class ComponentEmitterVerilog(
               |        case (addr)
               |{romvals}
               |
-              |            default: data <= 32'h0;
+              |            default: data <= {wordWidth}'h0;
               |        endcase
               |    end else begin
               |        data <= data;
@@ -1229,6 +1229,8 @@ class ComponentEmitterVerilog(
           val content = template
             .replace("{romvals}", v_builder.toString)
             .replace("{prefix}", s"${baseName}")
+            .replace("{wordCount}", s"${mem.wordCount}")
+            .replace("{wordWidth}", s"${symbolWidth}")
 
           val filePath = s"${pc.config.targetDirectory}/${baseName}_Rom_1rs.v"
           val file = new File(filePath)
