@@ -1154,16 +1154,36 @@ class ComponentEmitterVerilog(
           // TODO: fix for multiple symbols
           val symbolPostfix = if(withSymbols) s"_symbol$i" else ""
           val builder = new mutable.StringBuilder()
+          val v_builder = new mutable.StringBuilder()
           for ((value, index) <- mem.initialContent.zipWithIndex) {
             val unfilledValue = value.toString(2)
             val filledValue = "0" * (mem.getWidth - unfilledValue.length) + unfilledValue
             if(withSymbols) {
               builder ++=  s"${filledValue.substring(symbolWidth * (symbolCount - i - 1), symbolWidth * (symbolCount - i))}\n"
             } else {
-              builder ++= s"            'd$index: data <= 32'b$filledValue;\n"
+              builder ++= s"$filledValue\n"
+              v_builder ++= s"            'd$index: data <= 32'b$filledValue;\n"
             }
           }
 
+          // Emit a .bin file template for the ROM
+          val romStr = builder.toString
+          val relativePath = romCache.get(romStr) match {
+            case None =>
+              val filePath = s"${pc.config.targetDirectory}/${nativeRomFilePrefix}_${(component.parents() :+ component).map(_.getName()).mkString("_")}_${emitReference(mem, false)}${symbolPostfix}.bin"
+              val file = new File(filePath)
+              emitedRtlSourcesPath += filePath
+              val writer = new java.io.FileWriter(file)
+              writer.write(romStr)
+              writer.flush()
+              writer.close()
+              if(spinalConfig.romReuse) romCache(romStr) = file.getName
+              file.getName
+            case Some(x) => x
+          }
+          logics ++= s"""    $$readmemb("${relativePath}",${emitReference(mem, false)}${symbolPostfix});\n"""
+
+          // Emit a verilog blackbox template for the ROM
           val template =
             """
               |`resetall
@@ -1207,7 +1227,7 @@ class ComponentEmitterVerilog(
           val baseName = if (lastUnderscoreIndex != -1) refFullName.substring(0, lastUnderscoreIndex) else refFullName
 
           val content = template
-            .replace("{romvals}", builder.toString)
+            .replace("{romvals}", v_builder.toString)
             .replace("{prefix}", s"${baseName}")
 
           val filePath = s"${pc.config.targetDirectory}/${baseName}_Rom_1rs.v"
