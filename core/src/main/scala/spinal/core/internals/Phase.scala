@@ -794,6 +794,9 @@ class PhaseMemBlackBoxingDefault(policy: MemBlackboxingPolicy) extends PhaseMemB
           wrapConsumers(port, rom.io.data)
 
           rom.setName(mem.getName())
+
+          // For bunnie's build only - removes a line that creates a warning on black boxed ROM.
+          removeMem()
         }
       } else {
         return "Can't blackbox ROM"

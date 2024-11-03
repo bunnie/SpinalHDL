@@ -1181,7 +1181,8 @@ class ComponentEmitterVerilog(
               file.getName
             case Some(x) => x
           }
-          logics ++= s"""    $$readmemb("${relativePath}",${emitReference(mem, false)}${symbolPostfix});\n"""
+          // For bunnie's build only -- Remove line that creates warning in synthesis
+          // logics ++= s"""    $$readmemb("${relativePath}",${emitReference(mem, false)}${symbolPostfix});\n"""
 
           // Emit a verilog blackbox template for the ROM
           val template =
